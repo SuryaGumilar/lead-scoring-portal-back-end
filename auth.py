@@ -24,7 +24,7 @@ def authenticate_user(session: Session, username: str, password: str):
     user = session.exec(select(User).where(User.username == username)).first()
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password):
         return False
     return user
 

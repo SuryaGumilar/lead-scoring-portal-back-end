@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
+from sqlalchemy import BigInteger, SmallInteger, Float, REAL
 
 class User(SQLModel, table=True):
     user_id: int = Field(default=None, primary_key=True)
@@ -7,10 +8,17 @@ class User(SQLModel, table=True):
     password: str
 
 class Customer(SQLModel, table=True):
-    customer_id: int = Field(default=None, primary_key=True, sa_type="BIGINT")
+    customer_id: int = Field(
+        default=None,
+        primary_key=True,
+        sa_type=BigInteger()
+    )
+
     name: str
     phone_number: str
-    age: int = Field(sa_type="SMALLINT")
+
+    age: int = Field(sa_type=SmallInteger())
+
     job: str
     marital_status: str
     education: str
@@ -20,14 +28,23 @@ class Customer(SQLModel, table=True):
     contact_method: str
     last_contact_month: str
     last_contact_weekday: str
+
     last_call_duration_sec: int
-    current_campaign_contacts: int = Field(sa_type="SMALLINT")
-    days_since_last_campaign: int = Field(sa_type="SMALLINT")
-    previous_campaign_contacts: int = Field(sa_type="SMALLINT")
+
+    current_campaign_contacts: int = Field(sa_type=SmallInteger())
+    days_since_last_campaign: int = Field(sa_type=SmallInteger())
+    previous_campaign_contacts: int = Field(sa_type=SmallInteger())
+
     previous_campaign_outcome: str
+
     employment_variation_rate: float = Field(nullable=True)
     consumer_price_index: float = Field(nullable=True)
     consumer_confidence_index: float = Field(nullable=True)
     euribor_3m_rate: float = Field(nullable=True)
-    number_of_employed: int = Field(nullable=True)
-    subscription_probability: Optional[float] = Field(default=None, sa_type="REAL")
+
+    number_of_employed: float = Field(nullable=True)
+
+    subscription_probability: Optional[float] = Field(
+        default=None,
+        sa_type=REAL()
+    )

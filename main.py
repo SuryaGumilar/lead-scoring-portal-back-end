@@ -1,13 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 from typing import List, Optional
 from datetime import timedelta
-from sqlalchemy import desc, nulls_last
+from sqlalchemy import desc, nulls_last, func
 from math import ceil
+from schemas import PaginatedCustomerResponse, CustomerItem
 
 from models import User, Customer
 from database import engine, get_session, create_db_and_tables
+from seed import create_users
 from auth import (
     authenticate_user,
     create_access_token,
@@ -16,11 +19,20 @@ from auth import (
 )
 from prediction import run_prediction_and_update_db
 
-app = FastAPI(title="ML Prediction Service")
+app = FastAPI(title="Lead Scoring Backend API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    create_users()  
 
 @app.post("/token")
 def login_for_access_token(
@@ -41,13 +53,13 @@ def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 # Helper: Filter customers by name or marital status
-@app.get("/", response_model=List[dict])
+@app.get("/", response_model=PaginatedCustomerResponse)
 def list_customers(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
     name: Optional[str] = Query(None),
     job: Optional[str] = Query(None),
-    marital: Optional[str] = Query(None),
+    marital_status: Optional[str] = Query(None),
     education: Optional[str] = Query(None),
     min_age: Optional[int] = Query(None),
     max_age: Optional[int] = Query(None),
@@ -60,8 +72,8 @@ def list_customers(
         query = query.where(Customer.name.icontains(name))
     if job:
         query = query.where(Customer.job.icontains(job))
-    if marital:
-        query = query.where(Customer.marital == marital)
+    if marital_status:
+        query = query.where(Customer.marital_status == marital_status)
     if education:
         query = query.where(Customer.education == education)
     if min_age is not None:
@@ -70,11 +82,12 @@ def list_customers(
         query = query.where(Customer.age <= max_age)
 
     # Get total count
-    total = session.exec(select([query.count()])).one()
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
 
-    # Apply stable ordering: y_percentage DESC, NULLs last, then by customer_id
+    # Apply stable ordering
     ordered_query = query.order_by(
-        nulls_last(desc(Customer.y_percentage)),
+        nulls_last(desc(Customer.subscription_probability)),
         Customer.customer_id
     )
 
@@ -82,21 +95,15 @@ def list_customers(
     offset = (page - 1) * page_size
     customers = session.exec(ordered_query.offset(offset).limit(page_size)).all()
 
-    return {
-        "page": page,
-        "page_size": page_size,
-        "total": total,
-        "total_pages": ceil(total / page_size) if total else 1,
-        "items": [
-            {
-                "name": c.name,
-                "age": c.age,
-                "phone_number": c.phone_number,
-                "y_percentage": c.y_percentage
-            }
-            for c in customers
-        ]
-    }
+    total_pages = ceil(total / page_size) if total > 0 else 1
+    
+    return PaginatedCustomerResponse(
+        page=page,
+        page_size=page_size,
+        total=total,
+        total_pages=total_pages,
+        items=customers
+    )
 
 @app.get("/customers/{customer_id}")
 def get_customer(

@@ -63,7 +63,7 @@ def run_prediction_and_update_db(session: Session):
     label_encoder = joblib.load("pre-trained-model/label_encoder.pkl")
 
     # Fetch customers without predictions
-    customers = session.exec(select(Customer).where(Customer.y_percentage == None)).all()
+    customers = session.exec(select(Customer).where(Customer.subscription_probability == None)).all()
     if not customers:
         return
 
