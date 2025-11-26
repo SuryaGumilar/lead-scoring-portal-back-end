@@ -18,8 +18,16 @@ from auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from prediction import run_prediction_and_update_db
+import os
 
-app = FastAPI(title="Lead Scoring Backend API")
+is_dev = os.getenv("ENV") == "development"
+
+app = FastAPI(
+    title="Lead Scoring Backend API",
+    docs_url="/docs" if is_dev else None,
+    redoc_url="/redoc" if is_dev else None,
+    openapi_url="/openapi.json" if is_dev else None,
+)
 
 app.add_middleware(
     CORSMiddleware,
