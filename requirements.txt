@@ -11,3 +11,5 @@ joblib
 python-dotenv
 bcrypt==4.3.0
 xgboost
+SQLAlchemy
+pydantic
