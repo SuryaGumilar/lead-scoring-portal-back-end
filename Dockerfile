@@ -4,7 +4,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # install requirement (bcrypt compile friendly)
-RUN pip install --no-cache-dir --no-binary=bcrypt bcrypt==4.3.0 -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
